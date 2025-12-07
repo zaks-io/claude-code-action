@@ -1,0 +1,117 @@
+name: Issue Triage
+
+on:
+  workflow_call:
+    inputs:
+      linear_team_prefix:
+        description:
+          'Linear team prefix for ticket references (e.g., "PROJ" for PROJ-123)'
+        type: string
+        required: false
+        default: ''
+      allowed_tools:
+        description: 'Comma-separated list of allowed tools for Claude'
+        type: string
+        required: false
+        default:
+          'Read,Grep,Glob,LS,Bash(gh issue:*),Bash(gh label:*),mcp__linear__*'
+      prompt:
+        description:
+          'Custom prompt to override the default triage behavior (leave empty
+          for default)'
+        type: string
+        required: false
+        default: ''
+    secrets:
+      claude_code_oauth_token:
+        description: 'Claude Code OAuth token'
+        required: true
+      github_token:
+        description: 'GitHub token for API access'
+        required: true
+      linear_api_token:
+        description: 'Linear API token'
+        required: true
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+  id-token: write
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Triage Issue
+        uses: anthropics/claude-code-action@v1
+        env:
+          LINEAR_API_TOKEN: ${{ secrets.linear_api_token }}
+        with:
+          claude_code_oauth_token: ${{ secrets.claude_code_oauth_token }}
+          github_token: ${{ secrets.github_token }}
+          track_progress: true
+          settings: |
+            {
+              "mcpServers": {
+                "linear": {
+                  "command": "npx",
+                  "args": ["-y", "@tacticlaunch/mcp-linear"]
+                }
+              }
+            }
+          claude_args: --allowedTools "${{ inputs.allowed_tools }}"
+          prompt: |
+            ${{ inputs.prompt || format('**Issue Triage Task**
+
+            A new GitHub issue has been created. Linear is the source of truth for all tickets.
+
+            ## Your Tasks
+
+            ### 1. Understand the Request
+            - Read the issue title and description
+            - Identify type: bug, feature, enhancement, or question
+            - Determine scope and complexity
+
+            ### 2. Research the Codebase
+            - Search for related code, components, or existing implementations
+            - Identify files that would likely need changes
+            - Check for similar functionality
+
+            ### 3. Ask Clarifying Questions (if needed)
+            - If vague or missing key info, ask specific questions
+            - For bugs: request reproduction steps, expected vs actual behavior
+            - For features: clarify acceptance criteria
+
+            ### 4. Apply Labels
+            Use `gh label list` to see available labels, then apply appropriate ones:
+            ```bash
+            gh issue edit $ISSUE_NUMBER --add-label "bug" --add-label "priority:high"
+            ```
+
+            ### 5. Linear Integration
+            Check if this issue is already linked to a Linear ticket (look for {0}-XXX in the issue body or comments).
+
+            **If NO Linear ticket exists:**
+            - Use the Linear MCP tools to create a new ticket
+            - Link it back to this GitHub issue
+            - Add a comment with the Linear ticket ID (e.g., "Created Linear ticket: {0}-123")
+
+            **If a Linear ticket already exists:**
+            - Fetch the ticket details using Linear MCP
+            - Update the GitHub issue with any additional context from Linear
+
+            ### 6. Provide Analysis Summary
+            Comment with:
+            - Your understanding of the request
+            - Files/components likely involved
+            - Complexity estimate (small/medium/large)
+            - Any dependencies or blockers
+            - Linear ticket reference
+
+            Be concise and actionable.', inputs.linear_team_prefix) }}
