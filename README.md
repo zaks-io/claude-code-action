@@ -21,8 +21,10 @@ Set these secrets in your repository or organization:
 | Secret                    | Required | Description                               |
 | ------------------------- | -------- | ----------------------------------------- |
 | `CLAUDE_CODE_OAUTH_TOKEN` | Yes      | Claude Code OAuth token                   |
-| `GITHUB_TOKEN`            | Yes      | Automatically provided by GitHub Actions  |
 | `LINEAR_API_KEY`          | No       | Required only if using Linear integration |
+
+> **Note:** `GITHUB_TOKEN` is automatically available in all workflows - no need
+> to pass it.
 
 ### Repository Access (Private Repos)
 
@@ -56,7 +58,6 @@ jobs:
     uses: zaks-io/claude-code-action/.github/workflows/claude.yml@main
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ### With Issue Triage
@@ -75,7 +76,6 @@ jobs:
       linear_team_prefix: 'PROJ'
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      github_token: ${{ secrets.GITHUB_TOKEN }}
       linear_api_token: ${{ secrets.LINEAR_API_KEY }}
 ```
 
@@ -98,7 +98,6 @@ jobs:
     uses: zaks-io/claude-code-action/.github/workflows/code-review.yml@main
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ### With Automatic Code Review
@@ -125,7 +124,6 @@ jobs:
       trigger_type: auto
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ## Workflow Reference
@@ -146,7 +144,6 @@ General-purpose Claude Code agent for responding to comments.
 | Secret                    | Required | Description             |
 | ------------------------- | -------- | ----------------------- |
 | `claude_code_oauth_token` | Yes      | Claude Code OAuth token |
-| `github_token`            | Yes      | GitHub token            |
 
 #### Permissions
 
@@ -178,7 +175,6 @@ Automated issue triage with Linear integration.
 | Secret                    | Required | Description             |
 | ------------------------- | -------- | ----------------------- |
 | `claude_code_oauth_token` | Yes      | Claude Code OAuth token |
-| `github_token`            | Yes      | GitHub token            |
 | `linear_api_token`        | Yes      | Linear API token        |
 
 #### Permissions
@@ -223,7 +219,6 @@ Code review workflow supporting both manual (`/review` comment) and automatic
 | Secret                    | Required | Description             |
 | ------------------------- | -------- | ----------------------- |
 | `claude_code_oauth_token` | Yes      | Claude Code OAuth token |
-| `github_token`            | Yes      | GitHub token            |
 
 #### Permissions
 
@@ -283,7 +278,6 @@ jobs:
     uses: zaks-io/claude-code-action/.github/workflows/claude.yml@main
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      github_token: ${{ secrets.GITHUB_TOKEN }}
 
   # Issue triage on new issues
   triage:
@@ -293,7 +287,6 @@ jobs:
       linear_team_prefix: 'PROJ'
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      github_token: ${{ secrets.GITHUB_TOKEN }}
       linear_api_token: ${{ secrets.LINEAR_API_KEY }}
 
   # Manual code review via /review comment
@@ -305,7 +298,6 @@ jobs:
     uses: zaks-io/claude-code-action/.github/workflows/code-review.yml@main
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ## Custom Prompts
@@ -324,7 +316,6 @@ jobs:
         3. Estimate complexity (S/M/L)
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      github_token: ${{ secrets.GITHUB_TOKEN }}
       linear_api_token: ${{ secrets.LINEAR_API_KEY }}
 ```
 

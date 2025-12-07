@@ -45,7 +45,8 @@ uses: ORG/REPO/.github/workflows/claude.yml@v1
 Each workflow defines:
 
 - `inputs` - Configurable parameters (allowed_tools, prompt, etc.)
-- `secrets` - Required credentials (claude_code_oauth_token, github_token)
+- `secrets` - Required credentials (claude_code_oauth_token, linear_api_token
+  for triage)
 - `permissions` - GitHub token scopes needed
 
 The `issue-triage.yml` workflow has conditional steps based on `enable_linear`
