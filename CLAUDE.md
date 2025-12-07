@@ -17,18 +17,18 @@ Claude Code into other repositories. It contains three workflows that wrap
 ## Commands
 
 ```bash
-# Format YAML and Markdown files
-npx prettier --write "**/*.{yml,yaml,md}"
+# Setup pre-commit hooks (run once)
+pip install pre-commit
+pre-commit install
 
-# Check formatting (used in CI)
-npx prettier --check "**/*.{yml,yaml,md}"
+# Run all checks manually
+pre-commit run --all-files
 
 # Lint GitHub Actions workflows
 actionlint
 
-# Setup pre-commit hooks
-pip install pre-commit
-pre-commit install
+# Format YAML and Markdown files
+npx prettier --write "**/*.{yml,yaml,md}"
 ```
 
 ## Architecture
