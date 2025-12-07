@@ -3,13 +3,20 @@ name: Code Review
 on:
   workflow_call:
     inputs:
+      trigger_type:
+        description:
+          'How the review was triggered: "comment" for /review command, "auto"
+          for PR open/ready'
+        type: string
+        required: false
+        default: 'comment'
       allowed_tools:
         description: 'Comma-separated list of allowed tools for Claude'
         type: string
         required: false
         default:
           'Read,Grep,Glob,LS,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr
-          view:*),Bash(gh run view:*)'
+          view:*),Bash(gh run list:*),Bash(gh run view:*)'
       prompt:
         description:
           'Custom prompt to override the default review behavior (leave empty
@@ -37,6 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: React to comment
+        if: inputs.trigger_type == 'comment'
         uses: actions/github-script@v7
         with:
           script: |
@@ -203,7 +211,7 @@ jobs:
             Be witty and engaging.' }}
 
       - name: Complete check run
-        if: always()
+        if: always() && inputs.trigger_type == 'comment'
         uses: actions/github-script@v7
         with:
           script: |
@@ -220,26 +228,15 @@ jobs:
               completed_at: new Date().toISOString()
             });
 
-      - name: React on success
-        if: success()
+      - name: React to completion
+        if: always() && inputs.trigger_type == 'comment'
         uses: actions/github-script@v7
         with:
           script: |
+            const emoji = '${{ job.status }}' === 'success' ? 'rocket' : 'confused';
             await github.rest.reactions.createForIssueComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               comment_id: context.payload.comment.id,
-              content: 'rocket'
-            });
-
-      - name: React on failure
-        if: failure()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.reactions.createForIssueComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: context.payload.comment.id,
-              content: 'confused'
+              content: emoji
             });

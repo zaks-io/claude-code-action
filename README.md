@@ -9,8 +9,8 @@ repositories.
 | Workflow           | Description                                             |
 | ------------------ | ------------------------------------------------------- |
 | `claude.yml`       | General-purpose Claude Code agent for issue/PR comments |
-| `issue-triage.yml` | Automated issue triage with optional Linear integration |
-| `code-review.yml`  | Manual code review triggered by `/review` comment       |
+| `issue-triage.yml` | Automated issue triage with Linear integration          |
+| `code-review.yml`  | Code review (manual `/review` or automatic on PR open)  |
 
 ## Prerequisites
 
@@ -53,7 +53,7 @@ on:
 
 jobs:
   claude:
-    uses: zaks-io/claude-code-action/.github/workflows/claude.yml@v1
+    uses: zaks-io/claude-code-action/.github/workflows/claude.yml@main
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -70,26 +70,8 @@ on:
 
 jobs:
   triage:
-    uses: zaks-io/claude-code-action/.github/workflows/issue-triage.yml@v1
-    secrets:
-      claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      github_token: ${{ secrets.GITHUB_TOKEN }}
-```
-
-### With Linear Integration
-
-```yaml
-name: Claude Code
-
-on:
-  issues:
-    types: [opened]
-
-jobs:
-  triage:
-    uses: zaks-io/claude-code-action/.github/workflows/issue-triage.yml@v1
+    uses: zaks-io/claude-code-action/.github/workflows/issue-triage.yml@main
     with:
-      enable_linear: true
       linear_team_prefix: 'PROJ'
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -97,7 +79,9 @@ jobs:
       linear_api_token: ${{ secrets.LINEAR_API_KEY }}
 ```
 
-### With Code Review
+### With Manual Code Review
+
+Triggered by `/review` comment on a PR:
 
 ```yaml
 name: Claude Code
@@ -111,7 +95,34 @@ jobs:
     if: |
       github.event.issue.pull_request &&
       contains(github.event.comment.body, '/review')
-    uses: zaks-io/claude-code-action/.github/workflows/code-review.yml@v1
+    uses: zaks-io/claude-code-action/.github/workflows/code-review.yml@main
+    secrets:
+      claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      github_token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### With Automatic Code Review
+
+Triggered automatically on PR open/ready (use in CI pipeline):
+
+```yaml
+name: CI
+
+on:
+  pull_request:
+    types: [opened, ready_for_review]
+
+jobs:
+  # ... your other CI jobs ...
+
+  code-review:
+    needs: [lint, test, build]
+    if: |
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.auto_merge == null
+    uses: zaks-io/claude-code-action/.github/workflows/code-review.yml@main
+    with:
+      trigger_type: auto
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -152,24 +163,23 @@ permissions:
 
 ### issue-triage.yml
 
-Automated issue triage with optional Linear integration.
+Automated issue triage with Linear integration.
 
 #### Inputs
 
-| Input                | Type    | Default                                                              | Description                                      |
-| -------------------- | ------- | -------------------------------------------------------------------- | ------------------------------------------------ |
-| `linear_team_prefix` | string  | `''`                                                                 | Linear team prefix (e.g., `PROJ` for `PROJ-123`) |
-| `allowed_tools`      | string  | `Read,Grep,Glob,LS,Bash(gh issue:*),Bash(gh label:*),mcp__linear__*` | Comma-separated list of allowed tools            |
-| `prompt`             | string  | `''`                                                                 | Custom prompt (overrides default)                |
-| `enable_linear`      | boolean | `false`                                                              | Enable Linear MCP integration                    |
+| Input                | Type   | Default                                                              | Description                                      |
+| -------------------- | ------ | -------------------------------------------------------------------- | ------------------------------------------------ |
+| `linear_team_prefix` | string | `''`                                                                 | Linear team prefix (e.g., `PROJ` for `PROJ-123`) |
+| `allowed_tools`      | string | `Read,Grep,Glob,LS,Bash(gh issue:*),Bash(gh label:*),mcp__linear__*` | Comma-separated list of allowed tools            |
+| `prompt`             | string | `''`                                                                 | Custom prompt (overrides default)                |
 
 #### Secrets
 
-| Secret                    | Required | Description                                          |
-| ------------------------- | -------- | ---------------------------------------------------- |
-| `claude_code_oauth_token` | Yes      | Claude Code OAuth token                              |
-| `github_token`            | Yes      | GitHub token                                         |
-| `linear_api_token`        | No       | Linear API token (required if `enable_linear: true`) |
+| Secret                    | Required | Description             |
+| ------------------------- | -------- | ----------------------- |
+| `claude_code_oauth_token` | Yes      | Claude Code OAuth token |
+| `github_token`            | Yes      | GitHub token            |
+| `linear_api_token`        | Yes      | Linear API token        |
 
 #### Permissions
 
@@ -190,21 +200,23 @@ When no custom `prompt` is provided, the workflow:
 3. Researches related code in the repository
 4. Asks clarifying questions if needed
 5. Applies appropriate labels
-6. Creates/links Linear tickets (if enabled)
+6. Creates/links Linear tickets
 7. Posts an analysis summary
 
 ---
 
 ### code-review.yml
 
-Manual code review triggered by `/review` comment on a PR.
+Code review workflow supporting both manual (`/review` comment) and automatic
+(PR open) triggers.
 
 #### Inputs
 
-| Input           | Type   | Default                                                                                             | Description                           |
-| --------------- | ------ | --------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| `allowed_tools` | string | `Read,Grep,Glob,LS,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh run view:*)` | Comma-separated list of allowed tools |
-| `prompt`        | string | `''`                                                                                                | Custom prompt (overrides default)     |
+| Input           | Type   | Default                                                                                                                 | Description                                             |
+| --------------- | ------ | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `trigger_type`  | string | `comment`                                                                                                               | `comment` for /review command, `auto` for PR open/ready |
+| `allowed_tools` | string | `Read,Grep,Glob,LS,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh run list:*),Bash(gh run view:*)` | Comma-separated list of allowed tools                   |
+| `prompt`        | string | `''`                                                                                                                    | Custom prompt (overrides default)                       |
 
 #### Secrets
 
@@ -234,11 +246,16 @@ When no custom `prompt` is provided, the review covers:
 4. **Testing** - Coverage, test quality, edge cases
 5. **Documentation** - Code docs, README updates, API docs
 
-The workflow also:
+**When `trigger_type: comment` (default):**
 
 - Creates a "Code Review" check run
-- Reacts with eyes emoji on start
-- Reacts with rocket (success) or confused (failure) on completion
+- Reacts with 👀 emoji on start
+- Gathers PR context (workflow runs, check runs)
+- Reacts with 🚀 (success) or 😕 (failure)
+
+**When `trigger_type: auto`:**
+
+- Runs a streamlined review without comment reactions or check runs
 
 ## Complete Example
 
@@ -263,7 +280,7 @@ jobs:
     if: |
       !contains(github.event.comment.body, '/review') &&
       github.event_name != 'issues'
-    uses: zaks-io/claude-code-action/.github/workflows/claude.yml@v1
+    uses: zaks-io/claude-code-action/.github/workflows/claude.yml@main
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -271,9 +288,8 @@ jobs:
   # Issue triage on new issues
   triage:
     if: github.event_name == 'issues' && github.event.action == 'opened'
-    uses: zaks-io/claude-code-action/.github/workflows/issue-triage.yml@v1
+    uses: zaks-io/claude-code-action/.github/workflows/issue-triage.yml@main
     with:
-      enable_linear: true
       linear_team_prefix: 'PROJ'
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -286,19 +302,11 @@ jobs:
       github.event_name == 'issue_comment' &&
       github.event.issue.pull_request &&
       contains(github.event.comment.body, '/review')
-    uses: zaks-io/claude-code-action/.github/workflows/code-review.yml@v1
+    uses: zaks-io/claude-code-action/.github/workflows/code-review.yml@main
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
-
-## Versioning
-
-Reference workflows using:
-
-- `@v1` - Latest v1.x.x release (recommended for production)
-- `@v1.0.0` - Specific version
-- `@main` - Latest commit (not recommended for production)
 
 ## Custom Prompts
 
@@ -307,7 +315,7 @@ All workflows support custom prompts to override default behavior:
 ```yaml
 jobs:
   triage:
-    uses: zaks-io/claude-code-action/.github/workflows/issue-triage.yml@v1
+    uses: zaks-io/claude-code-action/.github/workflows/issue-triage.yml@main
     with:
       prompt: |
         You are a helpful assistant. Analyze this issue and:
@@ -317,6 +325,7 @@ jobs:
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       github_token: ${{ secrets.GITHUB_TOKEN }}
+      linear_api_token: ${{ secrets.LINEAR_API_KEY }}
 ```
 
 ## Development
