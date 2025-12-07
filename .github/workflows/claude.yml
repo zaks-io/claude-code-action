@@ -17,9 +17,6 @@ on:
       claude_code_oauth_token:
         description: 'Claude Code OAuth token'
         required: true
-      github_token:
-        description: 'GitHub token for API access'
-        required: true
 
 permissions:
   contents: write
@@ -41,7 +38,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.claude_code_oauth_token }}
-          github_token: ${{ secrets.github_token }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           track_progress: true
           claude_args: "--allowedTools '${{ inputs.allowed_tools }}'"
           prompt: ${{ inputs.prompt }}
