@@ -6,30 +6,17 @@ on:
   pull_request:
 
 jobs:
-  lint:
-    name: Lint Workflows
+  pre-commit:
+    name: Pre-commit Checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run actionlint
-        uses: reviewdog/action-actionlint@v1
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          reporter: github-pr-review
-          fail_level: error
+          python-version: '3.12'
 
-  format:
-    name: Check Formatting
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Check formatting
-        run: npx prettier --check "**/*.{yml,yaml,md}"
+      - name: Run pre-commit
+        uses: pre-commit/action@v3.0.1
