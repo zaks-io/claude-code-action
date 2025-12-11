@@ -73,7 +73,6 @@ jobs:
             ${{ inputs.prompt || github.event.client_payload.prompt || format('**Linear Issue Triage Task**
 
             A Linear issue needs triage: {0}
-
             Issue ID: {1}
             Title: {2}
 
@@ -99,4 +98,7 @@ jobs:
             - Move the ticket from Triage to the appropriate next status
             - Add any relevant labels if needed
 
-            Be concise and actionable.', github.event.client_payload.url, github.event.client_payload.issue_id, github.event.client_payload.title) }}
+            Be concise and actionable.',
+            github.event.client_payload.url,
+            github.event.client_payload.issue_id,
+            github.event.client_payload.title) }}
