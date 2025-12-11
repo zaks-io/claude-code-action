@@ -193,13 +193,12 @@ Automated Linear issue triage via repository dispatch.
 
 #### Repository Dispatch Payload
 
-| Field         | Required | Description                                   |
-| ------------- | -------- | --------------------------------------------- |
-| `issue_id`    | Yes      | Linear issue ID (e.g., `PROJ-123`)            |
-| `url`         | Yes      | Linear issue URL                              |
-| `title`       | Yes      | Linear issue title                            |
-| `target_repo` | No       | Target repo to checkout (defaults to current) |
-| `prompt`      | No       | Custom prompt override                        |
+| Field      | Required | Description                        |
+| ---------- | -------- | ---------------------------------- |
+| `issue_id` | Yes      | Linear issue ID (e.g., `PROJ-123`) |
+| `url`      | Yes      | Linear issue URL                   |
+| `title`    | Yes      | Linear issue title                 |
+| `prompt`   | No       | Custom prompt override             |
 
 #### Secrets
 

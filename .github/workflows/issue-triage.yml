@@ -40,8 +40,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          repository:
-            ${{ github.event.client_payload.target_repo || github.repository }}
           fetch-depth: 0
 
       - name: Triage Issue
