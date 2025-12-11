@@ -60,23 +60,40 @@ jobs:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 ```
 
-### With Issue Triage
+### With Linear Issue Triage (Repository Dispatch)
+
+Trigger issue triage from Linear webhooks via repository dispatch:
 
 ```yaml
-name: Claude Code
+name: Linear Issue Triage
 
 on:
-  issues:
-    types: [opened]
+  repository_dispatch:
+    types: [linear-triage]
 
 jobs:
   triage:
     uses: zaks-io/claude-code-action/.github/workflows/issue-triage.yml@main
-    with:
-      linear_team_prefix: 'PROJ'
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       linear_api_token: ${{ secrets.LINEAR_API_KEY }}
+```
+
+To trigger, send a POST request to GitHub's repository dispatch API:
+
+```bash
+curl -X POST \
+  -H "Authorization: token $GITHUB_TOKEN" \
+  -H "Accept: application/vnd.github.v3+json" \
+  https://api.github.com/repos/OWNER/REPO/dispatches \
+  -d '{
+    "event_type": "linear-triage",
+    "client_payload": {
+      "issue_id": "PROJ-123",
+      "url": "https://linear.app/team/issue/PROJ-123",
+      "title": "Issue title"
+    }
+  }'
 ```
 
 ### With Manual Code Review
@@ -160,15 +177,29 @@ permissions:
 
 ### issue-triage.yml
 
-Automated issue triage with Linear integration.
+Automated Linear issue triage via repository dispatch.
+
+#### Triggers
+
+- `repository_dispatch` with type `linear-triage`
+- `workflow_call` for reusable workflow usage
 
 #### Inputs
 
-| Input                | Type   | Default                                                              | Description                                      |
-| -------------------- | ------ | -------------------------------------------------------------------- | ------------------------------------------------ |
-| `linear_team_prefix` | string | `''`                                                                 | Linear team prefix (e.g., `PROJ` for `PROJ-123`) |
-| `allowed_tools`      | string | `Read,Grep,Glob,LS,Bash(gh issue:*),Bash(gh label:*),mcp__linear__*` | Comma-separated list of allowed tools            |
-| `prompt`             | string | `''`                                                                 | Custom prompt (overrides default)                |
+| Input           | Type   | Default                                                              | Description                       |
+| --------------- | ------ | -------------------------------------------------------------------- | --------------------------------- |
+| `allowed_tools` | string | `Read,Grep,Glob,LS,Bash(gh issue:*),Bash(gh label:*),mcp__linear__*` | Comma-separated list of tools     |
+| `prompt`        | string | `''`                                                                 | Custom prompt (overrides default) |
+
+#### Repository Dispatch Payload
+
+| Field         | Required | Description                                   |
+| ------------- | -------- | --------------------------------------------- |
+| `issue_id`    | Yes      | Linear issue ID (e.g., `PROJ-123`)            |
+| `url`         | Yes      | Linear issue URL                              |
+| `title`       | Yes      | Linear issue title                            |
+| `target_repo` | No       | Target repo to checkout (defaults to current) |
+| `prompt`      | No       | Custom prompt override                        |
 
 #### Secrets
 
@@ -191,13 +222,11 @@ permissions:
 
 When no custom `prompt` is provided, the workflow:
 
-1. Analyzes the issue title and description
-2. Identifies the issue type (bug, feature, enhancement, question)
-3. Researches related code in the repository
-4. Asks clarifying questions if needed
-5. Applies appropriate labels
-6. Creates/links Linear tickets
-7. Posts an analysis summary
+1. Fetches full issue details from Linear via MCP
+2. Researches related code in the repository
+3. Updates the Linear ticket with analysis (files involved, complexity,
+   implementation suggestions)
+4. Moves the ticket from Triage to the appropriate status
 
 ---
 
@@ -264,27 +293,25 @@ on:
     types: [created]
   pull_request_review_comment:
     types: [created]
-  issues:
-    types: [opened, labeled]
   pull_request_review:
     types: [submitted]
+  repository_dispatch:
+    types: [linear-triage]
 
 jobs:
   # General Claude agent for comments
   claude:
     if: |
-      !contains(github.event.comment.body, '/review') &&
-      github.event_name != 'issues'
+      github.event_name != 'repository_dispatch' &&
+      !contains(github.event.comment.body, '/review')
     uses: zaks-io/claude-code-action/.github/workflows/claude.yml@main
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
-  # Issue triage on new issues
+  # Issue triage via repository dispatch (triggered by Linear webhook)
   triage:
-    if: github.event_name == 'issues' && github.event.action == 'opened'
+    if: github.event_name == 'repository_dispatch'
     uses: zaks-io/claude-code-action/.github/workflows/issue-triage.yml@main
-    with:
-      linear_team_prefix: 'PROJ'
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       linear_api_token: ${{ secrets.LINEAR_API_KEY }}

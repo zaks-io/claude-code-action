@@ -49,9 +49,9 @@ Each workflow defines:
   for triage)
 - `permissions` - GitHub token scopes needed
 
-The `issue-triage.yml` workflow has conditional steps based on `enable_linear`
-and `prompt` inputs to handle four combinations: with/without Linear,
-with/without custom prompt.
+The `issue-triage.yml` workflow is triggered via `repository_dispatch` (type:
+`linear-triage`) for Linear webhook integration. It uses the `format()` function
+to inject `client_payload` fields (issue_id, url, title) into the prompt.
 
 The `code-review.yml` workflow includes additional `actions/github-script` steps
 for check run management and emoji reactions.

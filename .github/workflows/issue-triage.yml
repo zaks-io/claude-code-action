@@ -3,12 +3,6 @@ name: Issue Triage
 on:
   workflow_call:
     inputs:
-      linear_team_prefix:
-        description:
-          'Linear team prefix for ticket references (e.g., "PROJ" for PROJ-123)'
-        type: string
-        required: false
-        default: ''
       allowed_tools:
         description: 'Comma-separated list of allowed tools for Claude'
         type: string
@@ -30,6 +24,9 @@ on:
         description: 'Linear API token'
         required: true
 
+  repository_dispatch:
+    types: [linear-triage]
+
 permissions:
   contents: read
   pull-requests: read
@@ -43,14 +40,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          repository:
+            ${{ github.event.client_payload.target_repo || github.repository }}
           fetch-depth: 0
 
       - name: Triage Issue
         uses: anthropics/claude-code-action@v1
         env:
-          LINEAR_API_TOKEN: ${{ secrets.linear_api_token }}
+          LINEAR_API_TOKEN:
+            ${{ secrets.linear_api_token || secrets.LINEAR_API_TOKEN }}
         with:
-          claude_code_oauth_token: ${{ secrets.claude_code_oauth_token }}
+          claude_code_oauth_token:
+            ${{ secrets.claude_code_oauth_token ||
+            secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           track_progress: true
           settings: |
@@ -62,53 +64,39 @@ jobs:
                 }
               }
             }
-          claude_args: --allowedTools "${{ inputs.allowed_tools }}"
+          claude_args:
+            --allowedTools "${{ inputs.allowed_tools ||
+            github.event.client_payload.allowed_tools ||
+            'Read,Grep,Glob,LS,Bash(gh issue:*),Bash(gh label:*),mcp__linear__*'
+            }}"
           prompt: |
-            ${{ inputs.prompt || format('**Issue Triage Task**
+            ${{ inputs.prompt || github.event.client_payload.prompt || format('**Linear Issue Triage Task**
 
-            A new GitHub issue has been created. Linear is the source of truth for all tickets.
+            A Linear issue needs triage: {0}
+
+            Issue ID: {1}
+            Title: {2}
 
             ## Your Tasks
 
-            ### 1. Understand the Request
-            - Read the issue title and description
-            - Identify type: bug, feature, enhancement, or question
-            - Determine scope and complexity
+            ### 1. Fetch Issue Details
+            - Use Linear MCP to fetch the full issue details for {1}
+            - Review the issue description, labels, and current status
 
             ### 2. Research the Codebase
             - Search for related code, components, or existing implementations
             - Identify files that would likely need changes
             - Check for similar functionality
 
-            ### 3. Ask Clarifying Questions (if needed)
-            - If vague or missing key info, ask specific questions
-            - For bugs: request reproduction steps, expected vs actual behavior
-            - For features: clarify acceptance criteria
-
-            ### 4. Apply Labels
-            Use `gh label list` to see available labels, then apply appropriate ones:
-            ```bash
-            gh issue edit $ISSUE_NUMBER --add-label "bug" --add-label "priority:high"
-            ```
-
-            ### 5. Linear Integration
-            Check if this issue is already linked to a Linear ticket (look for {0}-XXX in the issue body or comments).
-
-            **If NO Linear ticket exists:**
-            - Use the Linear MCP tools to create a new ticket
-            - Link it back to this GitHub issue
-            - Add a comment with the Linear ticket ID (e.g., "Created Linear ticket: {0}-123")
-
-            **If a Linear ticket already exists:**
-            - Fetch the ticket details using Linear MCP
-            - Update the GitHub issue with any additional context from Linear
-
-            ### 6. Provide Analysis Summary
-            Comment with:
-            - Your understanding of the request
+            ### 3. Update Linear Ticket
+            Update the Linear ticket with your analysis:
             - Files/components likely involved
             - Complexity estimate (small/medium/large)
             - Any dependencies or blockers
-            - Linear ticket reference
+            - Implementation suggestions or approach
 
-            Be concise and actionable.', inputs.linear_team_prefix) }}
+            ### 4. Update Ticket Status
+            - Move the ticket from Triage to the appropriate next status
+            - Add any relevant labels if needed
+
+            Be concise and actionable.', github.event.client_payload.url, github.event.client_payload.issue_id, github.event.client_payload.title) }}
