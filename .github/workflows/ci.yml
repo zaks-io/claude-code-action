@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, ready_for_review]
 
 jobs:
   pre-commit:
@@ -20,3 +21,15 @@ jobs:
 
       - name: Run pre-commit
         uses: pre-commit/action@v3.0.1
+
+  code-review:
+    name: Code Review
+    needs: [pre-commit]
+    if:
+      github.event_name == 'pull_request' && github.event.pull_request.draft ==
+      false
+    uses: ./.github/workflows/code-review.yml
+    with:
+      trigger_type: auto
+    secrets:
+      claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
