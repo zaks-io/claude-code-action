@@ -1,0 +1,121 @@
+name: Issue Follow-up
+
+on:
+  workflow_call:
+    inputs:
+      allowed_tools:
+        description: 'Comma-separated list of allowed tools for Claude'
+        type: string
+        required: false
+        default:
+          'Read,Write,Edit,Grep,Glob,LS,Bash(git:*),Bash(gh
+          pr:*),Bash(npm:*),Bash(bun:*),mcp__linear__*'
+      prompt:
+        description:
+          'Custom prompt to override the default follow-up behavior (leave empty
+          for default)'
+        type: string
+        required: false
+        default: ''
+    secrets:
+      claude_code_oauth_token:
+        description: 'Claude Code OAuth token'
+        required: true
+      linear_api_token:
+        description: 'Linear API token'
+        required: true
+
+  repository_dispatch:
+    types: [linear-followup]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+
+jobs:
+  followup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Process Follow-up
+        uses: anthropics/claude-code-action@v1
+        env:
+          LINEAR_API_TOKEN:
+            ${{ secrets.linear_api_token || secrets.LINEAR_API_TOKEN }}
+        with:
+          claude_code_oauth_token:
+            ${{ secrets.claude_code_oauth_token ||
+            secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          track_progress: true
+          settings: |
+            {
+              "mcpServers": {
+                "linear": {
+                  "command": "npx",
+                  "args": ["-y", "@tacticlaunch/mcp-linear"]
+                }
+              }
+            }
+          claude_args:
+            --allowedTools "${{ inputs.allowed_tools ||
+            github.event.client_payload.allowed_tools ||
+            'Read,Write,Edit,Grep,Glob,LS,Bash(git:*),Bash(gh
+            pr:*),Bash(npm:*),Bash(bun:*),mcp__linear__*' }}"
+          prompt: |
+            ${{ inputs.prompt || github.event.client_payload.prompt || format('**Linear Issue Follow-up**
+
+            Issue: {0}
+            Issue ID: {1}
+            Title: {2}
+
+            The user has sent you a follow-up message:
+
+            ---
+            {3}
+            ---
+
+            ## Instructions
+
+            ### 1. Understand the Context
+            - Use Linear MCP to fetch the full issue details for {1}
+            - Review the issue description, previous comments, and any existing work
+            - Check if there are any open PRs related to this issue
+
+            ### 2. Process the Request
+            Based on what the user is asking, take the appropriate action:
+
+            **If they are asking a question:**
+            - Research the codebase to find the answer
+            - Provide a clear, helpful response
+
+            **If they want code changes:**
+            - Make the requested changes
+            - If there is an existing PR, update it
+            - If not, create a new branch and PR
+
+            **If they want to update an existing PR:**
+            - Find the existing PR for this issue
+            - Make the requested changes on that branch
+            - Push the updates
+
+            **If they are providing feedback:**
+            - Acknowledge the feedback
+            - Make any necessary adjustments
+
+            ### 3. Respond via Linear
+            - Add a comment to the Linear ticket with your response
+            - Include any relevant details (code changes made, PR links, answers to questions)
+            - Be concise but thorough
+
+            Be helpful and responsive. Focus on what the user is asking.',
+            github.event.client_payload.issue_url,
+            github.event.client_payload.issue_id,
+            github.event.client_payload.issue_title,
+            github.event.client_payload.user_prompt) }}
