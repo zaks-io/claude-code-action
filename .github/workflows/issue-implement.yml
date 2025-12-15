@@ -1,0 +1,111 @@
+name: Issue Implementation
+
+on:
+  workflow_call:
+    inputs:
+      allowed_tools:
+        description: 'Comma-separated list of allowed tools for Claude'
+        type: string
+        required: false
+        default:
+          'Read,Write,Edit,Grep,Glob,LS,Bash(git:*),Bash(gh
+          pr:*),Bash(npm:*),Bash(bun:*),mcp__linear__*'
+      prompt:
+        description:
+          'Custom prompt to override the default implementation behavior (leave
+          empty for default)'
+        type: string
+        required: false
+        default: ''
+    secrets:
+      claude_code_oauth_token:
+        description: 'Claude Code OAuth token'
+        required: true
+      linear_api_token:
+        description: 'Linear API token'
+        required: true
+
+  repository_dispatch:
+    types: [linear-implement]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Implement Issue
+        uses: anthropics/claude-code-action@v1
+        env:
+          LINEAR_API_TOKEN:
+            ${{ secrets.linear_api_token || secrets.LINEAR_API_TOKEN }}
+        with:
+          claude_code_oauth_token:
+            ${{ secrets.claude_code_oauth_token ||
+            secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          track_progress: true
+          settings: |
+            {
+              "mcpServers": {
+                "linear": {
+                  "command": "npx",
+                  "args": ["-y", "@tacticlaunch/mcp-linear"]
+                }
+              }
+            }
+          claude_args:
+            --allowedTools "${{ inputs.allowed_tools ||
+            github.event.client_payload.allowed_tools ||
+            'Read,Write,Edit,Grep,Glob,LS,Bash(git:*),Bash(gh
+            pr:*),Bash(npm:*),Bash(bun:*),mcp__linear__*' }}"
+          prompt: |
+            ${{ inputs.prompt || github.event.client_payload.prompt || format('**Linear Issue Implementation Task**
+
+            A Linear issue needs implementation: {0}
+            Issue ID: {1}
+            Title: {2}
+
+            ## Your Tasks
+
+            ### 1. Fetch Issue Details
+            - Use Linear MCP to fetch the full issue details for {1}
+            - Review the issue description, acceptance criteria, and any comments
+
+            ### 2. Understand the Codebase
+            - Search for related code, components, or existing implementations
+            - Identify the files that need to be modified or created
+            - Understand the existing patterns and conventions
+
+            ### 3. Implement the Feature/Fix
+            - Create a new branch for this work (use git)
+            - Implement the changes following existing code patterns
+            - Write clean, well-structured code
+            - Add or update tests as appropriate
+            - Ensure the code compiles and tests pass
+
+            ### 4. Create Pull Request
+            - Commit your changes with a clear commit message
+            - Push the branch and create a pull request using gh cli
+            - Include a description of the changes and link to the Linear issue
+
+            ### 5. Update Linear Ticket
+            - Add a comment to the Linear ticket with:
+              - Link to the pull request
+              - Summary of changes made
+              - Any notes for reviewers
+            - Update the ticket status to "In Review"
+
+            Be thorough but efficient. Follow existing code conventions.',
+            github.event.client_payload.url,
+            github.event.client_payload.issue_id,
+            github.event.client_payload.title) }}
