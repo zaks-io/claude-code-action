@@ -87,7 +87,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           track_progress: true
           claude_args: --allowedTools "${{ inputs.allowed_tools }}"
-          allowed_bots: 'useotto[bot]'
+          allowed_bots: 'blacksmith-sh,useotto[bot]'
           prompt: |
             **Context:**
             - Triggered by: ${{ inputs.trigger_type == 'comment' && 'Manual `/review` comment' || 'Automatic (PR opened/ready)' }}
