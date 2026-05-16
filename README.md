@@ -236,11 +236,11 @@ Code review workflow supporting both manual (`/review` comment) and automatic
 
 #### Inputs
 
-| Input           | Type   | Default                                                                                                                 | Description                                             |
-| --------------- | ------ | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| `trigger_type`  | string | `comment`                                                                                                               | `comment` for /review command, `auto` for PR open/ready |
-| `allowed_tools` | string | `Read,Grep,Glob,LS,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh run list:*),Bash(gh run view:*)` | Comma-separated list of allowed tools                   |
-| `prompt`        | string | `''`                                                                                                                    | Custom prompt (overrides default)                       |
+| Input           | Type   | Default                                                                                                         | Description                                             |
+| --------------- | ------ | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `trigger_type`  | string | `comment`                                                                                                       | `comment` for /review command, `auto` for PR open/ready |
+| `allowed_tools` | string | `mcp__github_inline_comment__create_inline_comment,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*)` | Comma-separated list of allowed tools                   |
+| `prompt`        | string | `''`                                                                                                            | Custom prompt (overrides default)                       |
 
 #### Secrets
 
@@ -261,13 +261,16 @@ permissions:
 
 #### Default Behavior
 
-When no custom `prompt` is provided, the review covers:
+When no custom `prompt` is provided, the review is diff-focused and flags only:
 
-1. **Code Quality** - Clean code, error handling, readability, KISS/DRY
-2. **Security** - Vulnerabilities, input sanitization, auth logic, secrets
-3. **Performance** - Bottlenecks, query efficiency, memory leaks
-4. **Testing** - Coverage, test quality, edge cases
-5. **Documentation** - Code docs, README updates, API docs
+- Bugs and logic errors
+- Security issues (injection, auth, secrets, unsafe input handling)
+- Broken or missing error handling
+- Test gaps for the changed code
+
+Comments are posted inline on specific lines via
+`mcp__github_inline_comment__create_inline_comment`, with a single top-level
+summary. Nitpicks, style, and praise are skipped.
 
 **When `trigger_type: comment` (default):**
 
