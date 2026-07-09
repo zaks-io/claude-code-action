@@ -87,7 +87,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           track_progress: true
           claude_args: --allowedTools "${{ inputs.allowed_tools }}"
-          allowed_bots: 'blacksmith-sh,useotto[bot]'
+          allowed_bots: 'blacksmith-sh,useotto[bot],useotto-dev[bot]'
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
