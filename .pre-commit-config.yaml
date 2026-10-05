@@ -1,3 +1,5 @@
+# Keep generated upstream skills byte-identical.
+exclude: ^(\.agents|\.claude)/skills/ziw-[^/]+/
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
